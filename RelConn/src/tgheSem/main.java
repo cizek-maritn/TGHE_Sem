@@ -5,7 +5,7 @@
 package tgheSem;
 
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Scanner;
 
@@ -24,20 +24,21 @@ public class main {
         int connections=Integer.parseInt(input[1]);
         //newLines je pole začátků řádků, neighbors je pole sousedů a hodnocení hran
         int[] newLines=new int[stations+1];
-        float[][] neighbors=new float[connections*2][2];
+        double[][] neighbors=new double[connections*2][2];
         //parsování spojení
-        List<String> list=new ArrayList<String>();
+        List<graphClass> list=new ArrayList<graphClass>();
         for(int i=0;i<connections*2;i+=2) {
             input=sc.nextLine().split("\\s+");
-            list.add(input[0]+" "+input[1]+" "+input[2]);
-            list.add(input[1]+" "+input[0]+" "+input[2]);
+            list.add(new graphClass((input[0]+" "+input[1]+" "+input[2]),Integer.parseInt(input[0])));
+            list.add(new graphClass((input[1]+" "+input[0]+" "+input[2]),Integer.parseInt(input[1])));
         }
-        Collections.sort(list);
+        list.sort(new graphComp());
         for (int i=0;i<connections*2;i++) {
-            input=list.get(i).split("\\s+");
-            newLines[Integer.parseInt(input[0])+1]++;
+            input=list.get(i).getFull().split("\\s+");
+            int point=(int) Double.parseDouble(input[0])+1;
+            newLines[point]+=1;
             neighbors[i][0]=Integer.parseInt(input[1]);
-            neighbors[i][1]=Float.parseFloat(input[2]);
+            neighbors[i][1]=Double.parseDouble(input[2]);
         }
         for (int i=1;i<stations+1;i++) {
             newLines[i]=newLines[i]+newLines[i-1];
@@ -51,25 +52,31 @@ public class main {
             int start=Integer.parseInt(input[0]);
             int end=Integer.parseInt(input[1]);
             //sance na konekci, prakticky distance
-            float[] probabilities = new float[stations];
-            probabilities[end]=1;
+            double[] probabilities = new double[stations];
+            probabilities[start]=1;
             //stromová struktura nejlepších spojení od koncové stanice
             int[] tree = new int[stations];
-            tree[end]=-1;
+            tree[start]=-1;
             //body, které již byly prolezeny. 0 = neprolezen, 1 = prolezen
             int[] tested = new int[stations];
-            int next=end;
+            int next=start;
             for (int j=0;j<stations;j++) {
                 //urceni dalsiho bodu pro prolezeni
+                double probVar=0;
                 for (int k=0; k<stations;k++) {
                     if (tested[k]==0 && probabilities[k]>0) {
-                        next=k; break;
+                        probVar=probabilities[k];
+                        if (tested[next]==1) {
+                            next=k;
+                        } else if (probVar>probabilities[next]) {
+                            next = k;
+                        }
                     }
                 }
                 //prolezení daného bodu
-                for (int k=0;k<(newLines[k+1]-newLines[k]);k++) {
-                    int currentPoint = (int) neighbors[newLines[next]+k][0];
-                    float currentProb = neighbors[newLines[next]+k][1]*probabilities[next];
+                for (int k=0;k<(newLines[next+1]-newLines[next]);k++) {
+                    int currentPoint = (int) neighbors[newLines[next]+k][0];                    
+                    double currentProb = neighbors[newLines[next]+k][1]*probabilities[next];
                     if (probabilities[currentPoint]<currentProb) {
                         probabilities[currentPoint]=currentProb;
                         tree[currentPoint]=next;
@@ -77,14 +84,30 @@ public class main {
                 }
                 tested[next]=1;
             }
-            int output=start;
-            String s = "" + start;
+            int output=end;
+            String s = "" + end;
             while (tree[output]!=-1) {
                 s+=" " + tree[output];
                 output=tree[output];
             }
-            System.out.println(s);
+            String[] f = s.split("\\s");
+            for (int j=0;j<f.length;j++) {
+                System.out.print(f[f.length-j-1]);
+                if (j!=f.length-1) {
+                    System.out.print(" ");
+                }
+            }
+            System.out.println("");
+            
         }
     }
-    
+    private static class graphComp implements Comparator<graphClass> {
+        @Override
+        public int compare(graphClass o1, graphClass o2) {
+            if (o1.getNum()>o2.getNum()) return 1;
+            else if (o1.getNum()==o2.getNum()) return 0;
+            else return -1;
+        }
+        
+    }
 }
